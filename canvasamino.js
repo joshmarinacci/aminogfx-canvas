@@ -281,7 +281,13 @@ var canvas_native = {
             g.fillStyle = core.stage.fill();
             g.fillRect(0,0,w,h);
         }
+        g.save();
+        if(core.stage.smooth() === false) {
+            g.webkitImageSmoothingEnabled = false;
+            g.mozImageSmoothingEnabled = false;
+        }
         this.root.draw(g);
+        g.restore();
         //draw debug overlay
         /*
         g.fillStyle = "white";
