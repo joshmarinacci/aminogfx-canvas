@@ -1,35 +1,75 @@
-console.log("inside the canvas amino");
+var amino = require('aminogfx');
+var input = amino.input;
+var Core = amino.Core;
 
-var amino = require('../aminogfx/src/amino');
-var input = require('../aminogfx/src/aminoinput');
 var fontmap = {};
 var dprint_text = "";
 function dprint(str) {
     dprint_text = str;
 }
 
-function rp() {
-    requestAnimationFrame(function() {
-        amino.native.tick(amino.getCore());
-    });
-}
-exports.refresh = function() {
-    rp();
-};
 
-amino.startEventLoop = function() {
-/*
-    //rp();
-    function lp() {
-        amino.native.tick(amino.getCore());
-        requestAnimationFrame(lp);
+function CPropAnim(target,name) {
+    this._from = null;
+    this._to = null;
+    this._duration = 1000;
+    this._loop = 1;
+    this._delay = 0;
+    this._autoreverse = 0;
+    /*
+    if(remap[name]) {
+        name = remap[name];
     }
-    requestAnimationFrame(lp);
-*/
-};
+    */
+    this._then_fun = null;
 
-amino.native = {
+    this.from = function(val) {  this._from = val;        return this;  }
+    this.to   = function(val) {  this._to = val;          return this;  }
+    this.dur  = function(val) {  this._duration = val;    return this;  }
+    this.delay= function(val) {  this._delay = val;       return this;  }
+    this.loop = function(val) {  this._loop = val;        return this;  }
+    this.then = function(fun) {  this._then_fun = fun;    return this;  }
+    this.autoreverse = function(val) { this._autoreverse = val?1:0; return this;  }
+
+    this.start = function() {
+        var self = this;
+        setTimeout(function(){
+            //var nat = amino.getCore().getNative();
+            var nat = canvas_native;
+            self.handle = nat.createAnim(target.handle, name, self._from, self._to, self._duration, self._loop, self._autoreverse);
+            nat.updateAnimProperty(self.handle, 'count', self._loop);
+            nat.updateAnimProperty(self.handle, 'autoreverse', self._autoreverse);
+            nat.updateAnimProperty(self.handle, 'lerpprop', 17); //17 is cubic in out
+            Core.getCore().anims.push(self.handle);
+            self.handle.init(Core.getCore());
+        },this._delay);
+        return this;
+    }
+
+    this.finish = function() {
+        if(this._then_fun != null) {
+            this._then_fun();
+        }
+    }
+
+
+}
+
+var pending = false;
+function scheduleRepaint() {
+    if(!pending) {
+        pending = true;
+        requestAnimationFrame(function() {
+            canvas_native.tick(Core.getCore());
+            pending = false;
+            if(Core.getCore().animsrunning === true) scheduleRepaint();
+        });
+    }
+}
+
+var canvas_native = {
     list:[],
+    dirty: false,
 
     createDefaultFont: function(path) {
         //console.log('creating native font ' + path);
@@ -39,10 +79,13 @@ amino.native = {
         fontmap[args.name] = new CanvasFont(this.domctx,args.name);
     },
     init: function() {
-        console.log("canvas amino doesn't really do an init");
+        //console.log("canvas amino doesn't really do an init");
+    },
+    startEventLoop: function() {
+        //console.log("canvas amino pretending to start an event loop");
     },
     setEventCallback: function(cb) {
-        console.log("pretending to set an event callback");
+        //console.log("pretending to set an event callback");
     },
     createWindow: function(core,w,h) {
         fontmap['source']  = new CanvasFont(this.domctx,'source');//_dirname+"/fonts/SourceSansPro-Regular.ttf");
@@ -57,8 +100,8 @@ amino.native = {
     createRect: function() {
         var rect = {
             "kind":"CanvasRect",
-            tx:0,
-            ty:0,
+            x:0,
+            y:0,
             w:100,
             h:100,
             r:0.5,
@@ -68,7 +111,7 @@ amino.native = {
             draw: function(g) {
                 if(this.visible != 1) return;
                 g.save();
-                g.translate(this.tx,this.ty);
+                g.translate(this.x,this.y);
                 g.scale(this.scalex,this.scaley);
                 if(this.opacity != 1.0) {
                     g.globalAlpha = this.opacity;
@@ -136,15 +179,15 @@ amino.native = {
         var group = {
             kind:"CanvasGroup",
             children:[],
-            tx:0,
-            ty:0,
+            x:0,
+            y:0,
             scalex:1,
             scaley:1,
             visible:1,
             draw: function(g) {
                 if(this.visible != 1) return;
                 g.save();
-                g.translate(this.tx,this.ty);
+                g.translate(this.x,this.y);
                 g.scale(this.scalex,this.scaley);
 
                 if(this.cliprect == 1) {
@@ -166,14 +209,19 @@ amino.native = {
         var text = {
             kind:"CanvasText",
             text:"foo",
-            tx:0,
-            ty:0,
+            x:0,
+            y:0,
             visible:1,
+            r:1.0,
+            g:1.0,
+            b:1.0,
             draw: function(g) {
                 if(this.visible != 1) return;
+                g.save();
                 g.fillStyle = "rgb("+this.r*255+","+this.g*255+","+this.b*255+")";
                 g.font = this.fontSize +"px "+this.fontId+", sans-serif";
-                g.fillText(this.text,this.tx,this.ty);
+                g.fillText(this.text,this.x,this.y);
+                g.restore();
             }
         };
         return text;
@@ -204,7 +252,7 @@ amino.native = {
         h2.children.splice(n,1);
     },
 
-    loadPngToTexture:  function(path,cb) {
+    loadImage: function(path,cb) {
         var img = new Image();
         img.onload = function() {
             img.texid = img;
@@ -214,21 +262,9 @@ amino.native = {
         }
         img.src = path;
     },
-
-    loadJpegToTexture: function(path,cb) {
-        var img = new Image();
-        img.onload = function() {
-            img.texid = img;
-            img.w = img.width;
-            img.h = img.height;
-            cb(img);
-        }
-        img.src = path;
-    },
-
     updateProperty: function(handle, key, value) {
         handle[key] = value;
-        rp();
+        scheduleRepaint();
     },
     setRoot: function(root) {
         this.root = root;
@@ -239,8 +275,12 @@ amino.native = {
         var w = this.domcanvas.width;
         var h = this.domcanvas.height;
         var g = this.domctx;
-        g.fillStyle = "white";
-        g.fillRect(0,0,w,h);
+        if(core.stage.transparent() === true) {
+            g.clearRect(0,0,w,h);
+        } else {
+            g.fillStyle = core.stage.fill();
+            g.fillRect(0,0,w,h);
+        }
         this.root.draw(g);
         //draw debug overlay
         /*
@@ -249,9 +289,6 @@ amino.native = {
         g.fillStyle = "black";
         g.fillText(dprint_text,30,10);
         */
-    },
-    setImmediate: function(loop) {
-        requestAnimationFrame(loop);
     },
     setWindowSize: function(w,h) {
         //NO OP
@@ -262,23 +299,31 @@ amino.native = {
             h: this.domcanvas.height
         };
     },
+    createPropAnim: function(obj,name) {
+        return new CPropAnim(obj,name);
+    },
     createAnim: function(handle,prop,start,end,dur,count,rev) {
         return new CanvasPropAnim(handle,prop,start,end,dur,count,rev);
     },
     updateAnimProperty: function(handle, prop, value) {
-        console.log("pretending to update");
+        //console.log("pretending to update");
     },
     processAnims: function(core) {
+        core.animsrunning = false;
         core.anims.forEach(function(anim) {
             anim.update();
+            if(anim.active) {
+                core.animsrunning = true;
+            }
         });
     },
     sendValidate: function() {
-        input.processEvent(amino.getCore(),{
+        input.processEvent(Core.getCore(),{
             type: "validate"
         });
     }
 };
+Core.native = canvas_native;
 
 function CanvasPropAnim(handle, prop, start,end,duration, count, rev) {
     this.target = handle;
@@ -298,32 +343,31 @@ function CanvasPropAnim(handle, prop, start,end,duration, count, rev) {
 
     this.active = true;
     this.applyValue = function(val) {
-        var setter = this.target["set"+camelize(this.prop)];
-        if(setter) setter.call(this.target,val);
-    }
+        this.target[this.prop] = val;
+    };
 
     this.init = function(core) {
         this.startTime = Date.now();
-    }
+    };
+
     this.setInterpolator = function(lerptype) {
         this.lerptype = lerptype;
         return this;
-    }
+    };
+
     this.setCount = function(count) {
         this.count = count;
         loopcount = this.count;
         return this;
-    }
+    };
+
     this.setAutoreverse = function(av) {
         this.autoreverse = av;
         return this;
-    }
+    };
+
     this.finish = function() {
-        var setterName = "set"+camelize(this.prop);
-        var setter = this.node[setterName];
-        if(setter) {
-            setter.call(this.node,this.end);
-        }
+        this.node[this.prop] = this.end;
         for(var i in this.afterCallbacks) {
             this.afterCallbacks[i]();
         }
@@ -352,7 +396,6 @@ function CanvasPropAnim(handle, prop, start,end,duration, count, rev) {
         this.active = false;
     }
     this.update = function() {
-        console.log("updating animation");
         if(!this.active) return;
         this.currentTime = Date.now();
         var t = (this.currentTime - this.startTime)/this.duration;
@@ -377,6 +420,7 @@ function CanvasPropAnim(handle, prop, start,end,duration, count, rev) {
         if(direction == BACKWARDS) {
             t = 1-t;
         }
+        //console.log(t);
         var val = (end-start)*t + start;
         this.applyValue(val);
     }
@@ -427,24 +471,12 @@ function toXY(e) {
     }
 }
 
-amino.forceRedraw = function() {
-    var dom = amino.native.domcanvas;
-    dom.width = dom.clientWidth;
-    dom.height = dom.clientHeight;
-        input.processEvent(Core._core,{
-            type:"windowsize",
-            width:dom.width,
-            height:dom.height,
-        });
-}
-
-amino.setupEventHandlers = function() {
-    var self = this;
-    var dom = amino.native.domcanvas;
+function setupEventHandlers(core) {
+    var dom = canvas_native.domcanvas;
     attachEvent(window,'resize',function(e) {
         dom.width = dom.clientWidth;
         dom.height = dom.clientHeight;
-        input.processEvent(amino.getCore(),{
+        input.processEvent(Core.getCore(),{
             type:"windowsize",
             width:dom.width,
             height:dom.height,
@@ -453,37 +485,36 @@ amino.setupEventHandlers = function() {
     attachEvent(dom,'mousedown',function(e){
         e.preventDefault();
         var pt = toXY(e);
-        console.log("original event",e,pt);
-        input.processEvent(amino.getCore(),{
+        input.processEvent(Core.getCore(),{
             type:"mouseposition",
             x:pt.x,
-            y:pt.y,
+            y:pt.y
         });
-        input.processEvent(amino.getCore(),{
+        input.processEvent(Core.getCore(),{
             type:"mousebutton",
             button:0,
-            state:1,
+            state:1
         });
     });
     attachEvent(dom,'mousemove',function(e){
         var pt = toXY(e);
         e.preventDefault();
-        input.processEvent(amino.getCore(),{
+        input.processEvent(Core.getCore(),{
             type:"mouseposition",
             x:pt.x,
-            y:pt.y,
+            y:pt.y
         });
     });
     attachEvent(dom,'mouseup',function(e){
         var pt = toXY(e);
         e.preventDefault();
         //mouseState.pressed = false;
-        input.processEvent(amino.getCore(),{
+        input.processEvent(Core.getCore(),{
             type:"mouseposition",
             x:pt.x,
             y:pt.y,
         });
-        input.processEvent(amino.getCore(),{
+        input.processEvent(Core.getCore(),{
             type:"mousebutton",
             button:0,
             state:0
@@ -494,12 +525,12 @@ amino.setupEventHandlers = function() {
         var pt = toXY(e.touches[0]);
         //dprint("touchstart: " + pt.x + " " + pt.y);
         e.preventDefault();
-        input.processEvent(amino.getCore(), {
+        input.processEvent(Core.getCore(), {
             type: "mouseposition",
             x:pt.x,
             y:pt.y,
         });
-        input.processEvent(Core._core,{
+        input.processEvent(Core.getCore(),{
             type:"mousebutton",
             button:0,
             state:1,
@@ -510,7 +541,7 @@ amino.setupEventHandlers = function() {
         var pt = toXY(e.touches[0]);
         //dprint("touchmove: " + pt.x + " " + pt.y);
         e.preventDefault();
-        input.processEvent(Core._core,{
+        input.processEvent(Core.getCore(),{
             type:"mouseposition",
             x:pt.x,
             y:pt.y,
@@ -522,12 +553,12 @@ amino.setupEventHandlers = function() {
         //dprint("touchend: " + pt.x + " " + pt.y);
         e.preventDefault();
         mouseState.pressed = false;
-        input.processEvent(amino.getCore(),{
+        input.processEvent(Core.getCore(),{
             type:"mouseposition",
             x:pt.x,
             y:pt.y,
         });
-        input.processEvent(amino.getCore(),{
+        input.processEvent(Core.getCore(),{
             type:"mousebutton",
             button:0,
             state:0
@@ -546,7 +577,7 @@ amino.setupEventHandlers = function() {
         if(keyRemap[key]) {
             key = keyRemap[key];
         }
-        input.processEvent(amino.getCore(),{
+        input.processEvent(Core.getCore(),{
                 type:"keypress",
                 keycode: key,
                 shift:   e.shiftKey?1:0,
@@ -556,7 +587,7 @@ amino.setupEventHandlers = function() {
     });
     attachEvent(window,'keyup',function(e){
         //e.preventDefault();
-        input.processEvent(amino.getCore(),{
+        input.processEvent(Core.getCore(),{
                 type:"keyrelease",
                 keycode: e.keyCode,
         });
@@ -574,24 +605,27 @@ amino.setupEventHandlers = function() {
 
 }
 
-
-amino.setCanvas = function(domcanvas) {
+exports.setCanvas = function(domcanvas) {
     if(domcanvas == null) throw new Error("couldn't find canvas with id " + id);
-    amino.native.domcanvas = domcanvas;
-    amino.native.domctx = domcanvas.getContext('2d');
-    if(amino.native.domctx == null) throw new Error("couldn't get a 2d context");
+    canvas_native.domcanvas = domcanvas;
+    canvas_native.domctx = domcanvas.getContext('2d');
+    if(canvas_native.domctx == null) throw new Error("couldn't get a 2d context");
 };
 
+amino.native = canvas_native;
 amino.start = function(cb) {
     if(!cb) throw new Error("CB parameter missing to start app");
-    amino.setupEventHandlers();
-    var Core = amino.Core;
-    Core._core = new Core();
-    Core._core.handleWindowSizeEvent = function(evt) {
-        rp();
+    Core.setCore(new Core());
+    var core = Core.getCore();
+    core.native = canvas_native;
+    amino.native = canvas_native;
+    setupEventHandlers(core);
+    core.handleWindowSizeEvent = function(evt) {
+        scheduleRepaint();
     }
-    Core._core.init();
-    var stage = Core._core.createStage(600,600);
-    cb(Core._core,stage);
-    Core._core.start();
+    core.init();
+    var dom = canvas_native.domcanvas;
+    var stage = core.createStage(dom.width,dom.height);
+    cb(core,stage);
+    core.start();
 }

@@ -1,29 +1,17 @@
-var amino_core = require('../aminogfx/src/amino.js');
-var input      = require('../aminogfx/src/aminoinput.js');
 var canvas = require('./canvasamino.js');
-console.log("fully loaded browsers main");
+var amino_core = require('aminogfx');
 
-
+exports.input = amino_core.input;
 exports.start = amino_core.start;
+exports.makeProps = amino_core.makeProps;
+
 exports.Group = amino_core.Group;
 exports.Circle = amino_core.Circle;
 exports.Rect = amino_core.Rect;
 exports.Text = amino_core.Text;
-exports.input = amino_core.input;
-exports.refresh = canvas.refresh;
-
-
+exports.ImageView = amino_core.ImageView;
 
 var OS = "BROWSER";
-input.init(OS);
-
-
-exports.makeProps = amino_core.makeProps;
-exports.getCore = amino_core.getCore;
-exports.setCanvas = amino_core.setCanvas;
-exports.native = amino_core.native;
-exports.ImageView = amino_core.primitives.ImageView;
-exports.registerFont = amino_core.registerFont;
-
-exports.ParseRGBString = amino_core.primitives.ParseRGBString;
+exports.input.init(OS);
+exports.setCanvas = canvas.setCanvas;
 //exports.ConstraintSolver = require('./src/ConstraintSolver');
