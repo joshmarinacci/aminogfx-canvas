@@ -450,7 +450,7 @@ function CanvasFont(g,name) {
         }
         return {
             ascender: size,
-            descender: -size/5,
+            descender: -size/5
             //ascender: amino.sgtest.getFontAscender(size, this.getNative(size, weight, style)),
             //descender: amino.sgtest.getFontDescender(size, this.getNative(size, weight, style)),
         };
@@ -473,7 +473,7 @@ function toXY(e) {
     var rect = e.target.getBoundingClientRect();
     return {
         x: e.pageX-rect.left,
-        y: e.pageY-rect.top,
+        y: e.pageY-rect.top
     }
 }
 
@@ -485,7 +485,7 @@ function setupEventHandlers(core) {
         input.processEvent(Core.getCore(),{
             type:"windowsize",
             width:dom.width,
-            height:dom.height,
+            height:dom.height
         });
     });
     attachEvent(dom,'mousedown',function(e){
@@ -518,7 +518,7 @@ function setupEventHandlers(core) {
         input.processEvent(Core.getCore(),{
             type:"mouseposition",
             x:pt.x,
-            y:pt.y,
+            y:pt.y
         });
         input.processEvent(Core.getCore(),{
             type:"mousebutton",
@@ -534,12 +534,12 @@ function setupEventHandlers(core) {
         input.processEvent(Core.getCore(), {
             type: "mouseposition",
             x:pt.x,
-            y:pt.y,
+            y:pt.y
         });
         input.processEvent(Core.getCore(),{
             type:"mousebutton",
             button:0,
-            state:1,
+            state:1
         });
     });
 
@@ -550,7 +550,7 @@ function setupEventHandlers(core) {
         input.processEvent(Core.getCore(),{
             type:"mouseposition",
             x:pt.x,
-            y:pt.y,
+            y:pt.y
         });
     });
 
@@ -562,7 +562,7 @@ function setupEventHandlers(core) {
         input.processEvent(Core.getCore(),{
             type:"mouseposition",
             x:pt.x,
-            y:pt.y,
+            y:pt.y
         });
         input.processEvent(Core.getCore(),{
             type:"mousebutton",
@@ -573,7 +573,7 @@ function setupEventHandlers(core) {
 
     var keyRemap = {
         190:46, // period
-        188:44, // comma
+        188:44 // comma
     };
 
     attachEvent(window,'keydown',function(e){
@@ -588,14 +588,14 @@ function setupEventHandlers(core) {
                 keycode: key,
                 shift:   e.shiftKey?1:0,
                 control: e.ctrlKey?1:0,
-                system:  e.metaKey?1:0,
+                system:  e.metaKey?1:0
         });
     });
     attachEvent(window,'keyup',function(e){
         //e.preventDefault();
         input.processEvent(Core.getCore(),{
                 type:"keyrelease",
-                keycode: e.keyCode,
+                keycode: e.keyCode
         });
     });
     /*
