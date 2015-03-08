@@ -5,13 +5,13 @@
 </style>
 </head>
 <body>
-    <canvas id='canvas' width='400' height='200'></canvas>
+    <canvas id='canvas' width='800' height='400'></canvas>
 </body>
-    <script src='../build/bundle.js'></script>
+    <script src='../aminogfx-canvas.bundle.js'></script>
 
  <script type='text/javascript'>
 
-var amino = require('aminogfx');
+var amino = require('aminogfx-canvas');
 amino.setCanvas(document.getElementById('canvas'));
 amino.start(function(core, stage) {
     var root = new amino.Group();
@@ -89,6 +89,25 @@ amino.start(function(core, stage) {
         amino.refresh();
         //animrect.x.anim().from(0.0).to(100.0).dur(1000).loop(-1).start();
     });
+
+
+    {
+        var g = new amino.Group();
+        g.add(new amino.Text().text("transform tests").x(10).y(10));
+
+        var g2 = new amino.Group().x(100).y(100).sx(2).sy(2);
+        var r = new amino.Rect().w(20).h(20).fill("#ffffff");
+        r.acceptsMouseEvents = true;
+        core.on('drag',r,function(e) {
+            e.target.x(e.target.x()+ e.delta.x);
+            e.target.y(e.target.y()+ e.delta.y);
+        });
+        g2.add(r);
+        g.add(g2);
+
+        root.add(g.x(500).y(50));
+    }
+
 });
 </script>
 </html>

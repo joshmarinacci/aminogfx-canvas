@@ -181,14 +181,14 @@ var canvas_native = {
             children:[],
             x:0,
             y:0,
-            scalex:1,
-            scaley:1,
+            sx:1,
+            sy:1,
             visible:1,
             draw: function(g) {
                 if(this.visible != 1) return;
                 g.save();
                 g.translate(this.x,this.y);
-                g.scale(this.scalex,this.scaley);
+                g.scale(this.sx,this.sy);
 
                 if(this.cliprect == 1) {
                     g.beginPath();
